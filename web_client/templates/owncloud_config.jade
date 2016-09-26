@@ -1,0 +1,11 @@
+.g-config-breadcrumb-container
+p.g-owncloud-description
+  | Configure OwnCloud integration.
+form#g-owncloud-settings-form(role="form")
+  .form-group
+    label.control-label(for="g-owncloud-url") OwnCloud URL
+    input.input-sm.form-control#g-owncloud-url(
+      type="text", placeholder="OwnCloud server's URL")
+
+  p#g-owncloud-error-message.g-validation-failed-message
+  input.btn.btn-sm.btn-primary(type="submit", value="Save")
