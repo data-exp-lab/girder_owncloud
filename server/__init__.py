@@ -13,13 +13,12 @@ import requests
 import six
 import string
 
-from girder import events
 from girder.api import access
 from girder.api.describe import Description, describeRoute
 from girder.api.rest import loadmodel, getCurrentToken
 from girder.models.model_base import AccessType, ValidationException
-# from girder.plugins.ythub.constants import \
-#    PluginSettings as ythubPluginSettings
+from girder.plugins.ythub.constants import \
+    PluginSettings as ythubPluginSettings
 from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter
 from .constants import PluginSettings
@@ -57,7 +56,7 @@ def validateTmpNbUrl(doc):
 )
 def updateOwnCloudPassword(user, params):
     if not user.get('ocpass'):
-        user = ModelImporter.model('user').save(user)
+        user = _userUpdateOCPass(user)
     password = params.get('password', user['ocpass'])
 
     message = json.dumps(
@@ -74,7 +73,7 @@ def updateOwnCloudPassword(user, params):
     )
 
     private_key = serialization.load_pem_private_key(
-        settings.get('ythub.priv_key').encode('utf8'),
+        settings.get(ythubPluginSettings.HUB_PRIV_KEY).encode('utf8'),
         password=None,
         backend=default_backend()
     )
@@ -100,7 +99,7 @@ def updateOwnCloudPassword(user, params):
     payload = {'message': base64.b64encode(ciphertext).decode('utf8'),
                'signature': base64.b64encode(signature).decode('utf8')}
     r = requests.post(oc_url + '/user', data=json.dumps(payload))
-    return
+    return user
 
 
 @access.user
@@ -111,7 +110,7 @@ def updateOwnCloudPassword(user, params):
 )
 def getOwnCloudPassword(user, params):
     if not user.get('ocpass'):
-        user = ModelImporter.model('user').save(user)
+        user = updateOwnCloudPassword(user, params)
 
     credentials = json.dumps(
         {'user': user['login'], 'pass': user['ocpass']}
@@ -123,13 +122,12 @@ def getOwnCloudPassword(user, params):
     return {'credentials': credentials.decode('utf8')}
 
 
-def _userUpdate(event):
-    user = event.info
+def _userUpdateOCPass(user):
     length = 20
     chars = string.ascii_letters + string.digits + '!@#$%^&*()'
     random.seed = (os.urandom(1024))
-    new_pass = ''.join(random.choice(chars) for i in range(length))
-    user['ocpass'] = validateString(user.get('ocpass', new_pass))
+    user['ocpass'] = ''.join(random.choice(chars) for i in range(length))
+    return ModelImporter.model('user').save(user)
 
 
 def load(info):
@@ -137,6 +135,3 @@ def load(info):
         'PUT', (':id', 'ocpass'), updateOwnCloudPassword)
     info['apiRoot'].user.route(
         'GET', (':id', 'ocpass'), getOwnCloudPassword)
-    events.bind('model.user.save', 'owncloud', _userUpdate)
-    # ModelImporter.model('user').exposeFields(
-    #    level=AccessType.WRITE, fields='ocpass')
