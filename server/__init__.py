@@ -56,13 +56,38 @@ def validateTmpNbUrl(doc):
 )
 def updateOwnCloudPassword(user, params):
     if not user.get('ocpass'):
-        user = _userUpdateOCPass(user)
+        user = _generateOCPass(user)
     password = params.get('password', user['ocpass'])
+    if password != user['ocpass']:
+        _updateOCPasswd({'user': user['login'], 'pass': password})
+        user = ModelImporter.model('user').save(user)
+    return user
 
-    message = json.dumps(
-        {'user': user['login'], 'pass': password}
+
+@access.user
+@loadmodel(model='user', level=AccessType.WRITE)
+@describeRoute(
+    Description('Get OwnCloud credentials.')
+    .param('id', 'The ID of the user', paramType='path')
+)
+def getOwnCloudPassword(user, params):
+    if not user.get('ocpass'):
+        user = _generateOCPass(user)
+        _updateOCPasswd({'user': user['login'], 'pass': user['ocpass']})
+        user = ModelImporter.model('user').save(user)
+
+    credentials = json.dumps(
+        {'username': user['login'], 'password': user['ocpass']}
     ).encode('utf8')
 
+    token = getCurrentToken()
+    key = token['_id'][:32]
+    credentials = Fernet(base64.b64encode(key)).encrypt(credentials)
+    return {'credentials': credentials.decode('utf8')}
+
+
+def _updateOCPasswd(credentials):
+    message = json.dumps(credentials).encode('utf8')
     settings = ModelImporter.model('setting')
     oc_url = settings.get(PluginSettings.OWNCLOUD_URL)
     r = requests.get(oc_url + '/user')
@@ -99,30 +124,9 @@ def updateOwnCloudPassword(user, params):
     payload = {'message': base64.b64encode(ciphertext).decode('utf8'),
                'signature': base64.b64encode(signature).decode('utf8')}
     r = requests.post(oc_url + '/user', data=json.dumps(payload))
-    return user
 
 
-@access.user
-@loadmodel(model='user', level=AccessType.WRITE)
-@describeRoute(
-    Description('Get OwnCloud credentials.')
-    .param('id', 'The ID of the user', paramType='path')
-)
-def getOwnCloudPassword(user, params):
-    if not user.get('ocpass'):
-        user = updateOwnCloudPassword(user, params)
-
-    credentials = json.dumps(
-        {'user': user['login'], 'pass': user['ocpass']}
-    ).encode('utf8')
-
-    token = getCurrentToken()
-    key = token['_id'][:32]
-    credentials = Fernet(base64.b64encode(key)).encrypt(credentials)
-    return {'credentials': credentials.decode('utf8')}
-
-
-def _userUpdateOCPass(user):
+def _generateOCPass(user):
     length = 20
     chars = string.ascii_letters + string.digits + '!@#$%^&*()'
     random.seed = (os.urandom(1024))
