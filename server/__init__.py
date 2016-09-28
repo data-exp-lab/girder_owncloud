@@ -15,7 +15,8 @@ import string
 
 from girder.api import access
 from girder.api.describe import Description, describeRoute
-from girder.api.rest import loadmodel, getCurrentToken
+from girder.api.rest import \
+    loadmodel, getCurrentToken, boundHandler, filtermodel
 from girder.models.model_base import AccessType, ValidationException
 from girder.plugins.ythub.constants import \
     PluginSettings as ythubPluginSettings
@@ -65,16 +66,16 @@ def updateOwnCloudPassword(user, params):
 
 
 @access.user
-@loadmodel(model='user', level=AccessType.WRITE)
 @describeRoute(
-    Description('Get OwnCloud credentials.')
-    .param('id', 'The ID of the user', paramType='path')
+    Description('Retrieve OC credentials of the currently logged-in user.')
 )
-def getOwnCloudPassword(user, params):
+@boundHandler()
+def getOwnCloudPassword(self, params):
+    user = self.getCurrentUser()
     if not user.get('ocpass'):
         user = _generateOCPass(user)
         _updateOCPasswd({'user': user['login'], 'pass': user['ocpass']})
-        user = ModelImporter.model('user').save(user)
+        user = self.model('user').save(user)
 
     credentials = json.dumps(
         {'username': user['login'], 'password': user['ocpass']}
@@ -138,4 +139,4 @@ def load(info):
     info['apiRoot'].user.route(
         'PUT', (':id', 'ocpass'), updateOwnCloudPassword)
     info['apiRoot'].user.route(
-        'GET', (':id', 'ocpass'), getOwnCloudPassword)
+        'GET', ('ocpass',), getOwnCloudPassword)
