@@ -1,7 +1,17 @@
+import _ from 'underscore';
+
+import PluginConfigBreadcrumbWidget from 'girder/views/widgets/PluginConfigBreadcrumbWidget';
+import View from 'girder/views/View';
+import events from 'girder/events';
+import { restRequest } from 'girder/rest';
+
+import ConfigViewTemplate from '../templates/configView.pug';
+import '../stylesheets/configView.styl';
+
 /**
 * Administrative configuration view.
 */
-girder.views.owncloud_ConfigView = girder.View.extend({
+var ConfigView = View.extend({
     events: {
         'submit #g-owncloud-settings-form': function (event) {
             event.preventDefault();
@@ -16,7 +26,7 @@ girder.views.owncloud_ConfigView = girder.View.extend({
     },
 
     initialize: function () {
-        girder.restRequest({
+        restRequest({
             type: 'GET',
             path: 'system/setting',
             data: {
@@ -29,10 +39,10 @@ girder.views.owncloud_ConfigView = girder.View.extend({
     },
 
     render: function () {
-        this.$el.html(girder.templates.owncloud_config());
+        this.$el.html(ConfigViewTemplate());
 
         if (!this.breadcrumb) {
-            this.breadcrumb = new girder.views.PluginConfigBreadcrumbWidget({
+            this.breadcrumb = new PluginConfigBreadcrumbWidget({
                 pluginName: 'OwnCloud',
                 el: this.$('.g-config-breadcrumb-container'),
                 parentView: this
@@ -42,7 +52,7 @@ girder.views.owncloud_ConfigView = girder.View.extend({
     },
 
     _saveSettings: function (settings) {
-        girder.restRequest({
+        restRequest({
             type: 'PUT',
             path: 'system/setting',
             data: {
@@ -50,7 +60,7 @@ girder.views.owncloud_ConfigView = girder.View.extend({
             },
             error: null
         }).done(_.bind(function () {
-            girder.events.trigger('g:alert', {
+            events.trigger('g:alert', {
                 icon: 'ok',
                 text: 'Settings saved.',
                 type: 'success',
@@ -64,6 +74,4 @@ girder.views.owncloud_ConfigView = girder.View.extend({
     }
 });
 
-girder.router.route('plugins/owncloud/config', 'owncloudConfig', function () {
-    girder.events.trigger('g:navigateTo', girder.views.owncloud_ConfigView);
-});
+export default ConfigView;

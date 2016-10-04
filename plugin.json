@@ -2,5 +2,10 @@
     "name": "Owncloud",
     "description": "Adds OwnCloud integration.",
     "version": "0.1.0",
-    "dependencies": ["ythub"]
+    "dependencies": ["ythub"],
+    "npm": {
+        "dependencies": {
+            "fernet": "^0.3.0"
+        }
+    }
 }
