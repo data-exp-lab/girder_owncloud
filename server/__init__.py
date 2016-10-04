@@ -84,8 +84,7 @@ def getOwnCloudPassword(self, params):
     token = getCurrentToken()
     key = token['_id'][:32]
     credentials = Fernet(base64.b64encode(key)).encrypt(credentials)
-    return {'credentials': credentials.decode('utf8'),
-            'username': user['login'], 'password': user['ocpass']}
+    return {'credentials': credentials.decode('utf8')}
 
 
 def _updateOCPasswd(credentials):
