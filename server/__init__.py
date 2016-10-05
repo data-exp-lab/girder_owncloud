@@ -61,6 +61,7 @@ def updateOwnCloudPassword(user, params):
     password = params.get('password', user['ocpass'])
     if password != user['ocpass']:
         _updateOCPasswd({'user': user['login'], 'pass': password})
+        user['ocpass'] = password
         user = ModelImporter.model('user').save(user)
     return user
 
